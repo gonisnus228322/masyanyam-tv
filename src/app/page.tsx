@@ -3,14 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  Search, Play, Film, Tv, Info, Star, 
+  Search, Play, Film, Tv, Star, 
   Sparkles, Heart, Bookmark 
 } from 'lucide-react';
 
 const TMDB_API_KEY = 'ab80ba7ea1625a8c5c64d20c5b33b41f';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/original';
-const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+const POSTER_MENU_URL = 'https://image.tmdb.org/t/p/w780'; // Optimized 780p for fast home menu loading
 
 export default function App() {
   const router = useRouter();
@@ -192,15 +192,17 @@ export default function App() {
         ) : (
           <>
             {heroMedia && (
-              <div className="relative w-full h-[65vh] sm:h-[70vh] min-h-[420px] max-h-[750px] mb-8 overflow-hidden bg-neutral-900">
+              <div className="relative w-full h-[65vh] sm:h-[70vh] min-h-[420px] max-h-[750px] mb-8 overflow-hidden bg-neutral-950">
                 <div className="absolute inset-0">
                   <img
                     src={`${IMAGE_BASE_URL}${heroMedia.backdrop_path}`}
                     alt={heroMedia.title || heroMedia.name}
                     className="w-full h-full object-cover filter brightness-90"
                   />
-                  <div className="absolute inset-0 bg-neutral-950/60" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/20 to-transparent" />
+                  {/* Heavy vertical and horizontal fade masks blending smoothly into pure black */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/50 to-transparent w-full sm:w-2/3" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-neutral-950/80 via-transparent to-neutral-950" />
                 </div>
 
                 <div className="relative max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-12">
@@ -262,7 +264,8 @@ function MediaSection({ title, items, onSelect }: { title: string; items: any[];
 }
 
 function MediaCard({ media, onClick }: { media: any; onClick: () => void }) {
-  const posterUrl = media.poster_path ? `${POSTER_BASE_URL}${media.poster_path}` : 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=80';
+  // Uses w780 profile for lightweight menu performance and quick thumbnail rendering
+  const posterUrl = media.poster_path ? `${POSTER_MENU_URL}${media.poster_path}` : 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=80';
   return (
     <button
       type="button"
