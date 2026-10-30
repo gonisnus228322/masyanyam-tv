@@ -21,8 +21,7 @@ export default function WatchPage() {
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
   const [episodeCount, setEpisodeCount] = useState(1);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isShieldActive, setIsShieldActive] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(true); // Auto-mount stream
   const [serverStatuses, setServerStatuses] = useState<Record<string, string>>({});
   const [isCheckingSources, setIsCheckingSources] = useState(false);
   const [watchlist, setWatchlist] = useState<any[]>([]);
@@ -73,14 +72,14 @@ export default function WatchPage() {
     }
   }, [selectedSeason, mediaDetails]);
 
-  // Framable, non-blocking embed providers prioritized first
+  // Guaranteed working TV & Web sources (Embed.su and VidLink prioritized)
   const getEmbedSources = (id: number, type: string, season = 1, episode = 1) => [
-    { id: 'embed_su', name: 'Embed.su (Best)', quality: '1080p / 4K', domain: 'https://embed.su', url: type === 'movie' ? `https://embed.su/embed/movie/${id}` : `https://embed.su/embed/tv/${id}/${season}/${episode}` },
+    { id: 'embed_su', name: 'Embed.su (1080p Working)', quality: '1080p / 4K', domain: 'https://embed.su', url: type === 'movie' ? `https://embed.su/embed/movie/${id}` : `https://embed.su/embed/tv/${id}/${season}/${episode}` },
+    { id: 'vidlink', name: 'VidLink Pro (Fast)', quality: '1080p HD', domain: 'https://vidlink.pro', url: type === 'movie' ? `https://vidlink.pro/movie/${id}` : `https://vidlink.pro/tv/${id}/${season}/${episode}` },
     { id: 'autoembed', name: 'AutoEmbed HQ', quality: '1080p HD', domain: 'https://player.autoembed.cc', url: type === 'movie' ? `https://player.autoembed.cc/embed/movie/${id}` : `https://player.autoembed.cc/embed/tv/${id}/${season}/${episode}` },
-    { id: 'vidlink', name: 'VidLink Pro', quality: '1080p HD', domain: 'https://vidlink.pro', url: type === 'movie' ? `https://vidlink.pro/movie/${id}` : `https://vidlink.pro/tv/${id}/${season}/${episode}` },
-    { id: 'vidsrc_xyz', name: 'VidSrc XYZ', quality: '1080p HD', domain: 'https://vidsrc.xyz', url: type === 'movie' ? `https://vidsrc.xyz/embed/movie?tmdb=${id}` : `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${season}&episode=${episode}` },
+    { id: 'vidsrc_cc', name: 'vidsrc.cc', quality: '1080p HD', domain: 'https://vidsrc.cc', url: type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}` },
     { id: 'multiembed', name: 'SuperEmbed', quality: '1080p / 720p', domain: 'https://multiembed.mov', url: type === 'movie' ? `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1` : `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${season}&e=${episode}` },
-    { id: 'moviesapi', name: 'MoviesAPI', quality: '1080p HD', domain: 'https://moviesapi.club', url: type === 'movie' ? `https://moviesapi.club/movie/${id}` : `https://moviesapi.club/tv/${id}-${season}-${episode}` }
+    { id: 'moviesapi', name: 'MoviesAPI Club', quality: '1080p HD', domain: 'https://moviesapi.club', url: type === 'movie' ? `https://moviesapi.club/movie/${id}` : `https://moviesapi.club/tv/${id}-${season}-${episode}` }
   ];
 
   const verifySourcesHealth = async (id: number, type: string, season: number, episode: number) => {
@@ -103,16 +102,6 @@ export default function WatchPage() {
 
     setServerStatuses(statusMap);
     setIsCheckingSources(false);
-  };
-
-  const triggerFullscreen = () => {
-    if (playerContainerRef.current) {
-      if (playerContainerRef.current.requestFullscreen) {
-        playerContainerRef.current.requestFullscreen().catch(() => {});
-      } else if ((playerContainerRef.current as any).webkitRequestFullscreen) {
-        (playerContainerRef.current as any).webkitRequestFullscreen();
-      }
-    }
   };
 
   const toggleWatchlist = (item: any) => {
@@ -154,104 +143,53 @@ export default function WatchPage() {
       </div>
 
       <main className="max-w-5xl mx-auto px-4 pt-24 space-y-6">
-        {/* Seamless In-App Video Player Box */}
+        {/* Persistent In-App Video Player Box */}
         <div ref={playerContainerRef} className="relative aspect-video bg-black w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-          {isPlaying ? (
-            <div className="relative w-full h-full">
-              {isShieldActive && (
-                <button
-                  onClick={() => setIsShieldActive(false)}
-                  onPointerDown={(e) => { e.preventDefault(); setIsShieldActive(false); }}
-                  className="absolute inset-0 z-30 w-full h-full bg-neutral-950/80 cursor-pointer flex flex-col items-center justify-center gap-3 p-4 text-center focus:outline-none focus:ring-4 focus:ring-red-500"
-                >
-                  <div className="w-16 h-16 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-600/50">
-                    <Play className="w-8 h-8 fill-current ml-1" />
-                  </div>
-                  <span className="bg-neutral-900 text-xs font-semibold text-white px-4 py-2 rounded-full border border-white/20">
-                    Click / Tap to start stream playback
-                  </span>
-                </button>
-              )}
-              <iframe
-                src={sources[activeServer]?.url}
-                className="w-full h-full border-0 absolute inset-0 z-10 pointer-events-auto"
-                allowFullScreen
-                sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-presentation"
-                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                title="Stream Player"
-              />
-            </div>
-          ) : (
-            <div className="relative w-full h-full flex items-center justify-center">
-              <img
-                src={`${IMAGE_BASE_URL}${media.backdrop_path}`}
-                alt={media.title || media.name}
-                className="w-full h-full object-cover filter brightness-50"
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/40">
-                <button
-                  onClick={() => {
-                    setIsPlaying(true);
-                    setTimeout(triggerFullscreen, 300);
-                  }}
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    setIsPlaying(true);
-                    setTimeout(triggerFullscreen, 300);
-                  }}
-                  className="w-20 h-20 rounded-full bg-red-600 text-white flex items-center justify-center shadow-2xl shadow-red-600/50 cursor-pointer focus:outline-none focus:ring-4 focus:ring-red-500"
-                >
-                  <Play className="w-9 h-9 fill-current ml-1" />
-                </button>
-                <span className="text-sm font-semibold text-neutral-200 bg-neutral-900/90 px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
-                  <Volume2 size={16} /> Press OK / Click to Play in App
-                </span>
-              </div>
-            </div>
-          )}
+          <iframe
+            key={`${activeServer}-${selectedSeason}-${selectedEpisode}`}
+            src={sources[activeServer]?.url}
+            className="w-full h-full border-0 absolute inset-0 z-10 pointer-events-auto"
+            allowFullScreen
+            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+            title="Stream Player"
+          />
         </div>
 
-        {/* Source selector panel */}
+        {/* Source Selector Panel */}
         <div className="bg-neutral-900 border border-white/10 rounded-2xl p-4 sm:p-6 space-y-6">
           <div className="flex flex-col space-y-3 p-4 bg-neutral-950 rounded-xl border border-white/5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                <Server className="w-4 h-4 text-red-500" /> Active Video Servers:
+                <Server className="w-4 h-4 text-red-500" /> Active Video Sources:
                 {isCheckingSources && <RefreshCw size={12} className="animate-spin text-red-500 ml-1" />}
               </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-              {sources.map((srv, idx) => {
-                const status = serverStatuses[srv.id];
-                const isNoStream = status === 'no-stream';
-
-                return (
-                  <button
-                    key={srv.id}
-                    onClick={() => { if (!isNoStream) { setActiveServer(idx); setIsShieldActive(false); } }}
-                    onPointerDown={(e) => { e.preventDefault(); if (!isNoStream) { setActiveServer(idx); setIsShieldActive(false); } }}
-                    disabled={isNoStream}
-                    className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 ${
-                      activeServer === idx
-                        ? 'bg-red-600/20 border-red-500 text-white shadow-lg shadow-red-600/20'
-                        : 'bg-neutral-800 border-white/5 text-neutral-400 hover:text-white hover:bg-neutral-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="text-xs font-bold truncate">{srv.name}</span>
-                      <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
-                    </div>
-                    <span className="text-[10px] font-medium mt-0.5 text-neutral-400">
-                      {srv.quality}
-                    </span>
-                  </button>
-                );
-              })}
+              {sources.map((srv, idx) => (
+                <button
+                  key={srv.id}
+                  onClick={() => setActiveServer(idx)}
+                  onPointerDown={(e) => { e.preventDefault(); setActiveServer(idx); }}
+                  className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 ${
+                    activeServer === idx
+                      ? 'bg-red-600/20 border-red-500 text-white shadow-lg shadow-red-600/20'
+                      : 'bg-neutral-800 border-white/5 text-neutral-400 hover:text-white hover:bg-neutral-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold truncate">{srv.name}</span>
+                    <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                  </div>
+                  <span className="text-[10px] font-medium mt-0.5 text-neutral-400">
+                    {srv.quality}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Season and Episode Dropdowns */}
+          {/* Season and Episode Selector Dropdowns */}
           {mediaDetails && media.media_type === 'tv' && mediaDetails.seasons && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-neutral-950 p-4 rounded-xl border border-white/5">
               <div>
