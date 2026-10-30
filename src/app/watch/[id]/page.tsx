@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
-  Play, X, Star, Server, Heart, Bookmark, Volume2, CheckCircle2, AlertCircle, RefreshCw, ArrowLeft 
+  Play, Star, Server, Bookmark, Volume2, CheckCircle2, AlertCircle, RefreshCw, ArrowLeft, ExternalLink 
 } from 'lucide-react';
 
 const TMDB_API_KEY = 'ab80ba7ea1625a8c5c64d20c5b33b41f';
@@ -20,6 +20,7 @@ export default function WatchPage() {
   const [activeServer, setActiveServer] = useState(0);
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
+  const [episodeCount, setEpisodeCount] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isShieldActive, setIsShieldActive] = useState(true);
   const [serverStatuses, setServerStatuses] = useState<Record<string, string>>({});
@@ -37,12 +38,12 @@ export default function WatchPage() {
     }
   }, []);
 
+  // Fetch Media and Season Details
   useEffect(() => {
     if (!mediaId) return;
 
     const fetchMediaData = async () => {
       try {
-        // Try searching or fetching as movie first, fallback to TV if needed
         let res = await fetch(`${TMDB_BASE_URL}/movie/${mediaId}?api_key=${TMDB_API_KEY}&append_to_response=credits`);
         let data = await res.json();
         
@@ -62,7 +63,17 @@ export default function WatchPage() {
     };
 
     fetchMediaData();
-  }, [mediaId, selectedSeason, selectedEpisode]);
+  }, [mediaId]);
+
+  // Update Episode count when Season changes for TV shows
+  useEffect(() => {
+    if (mediaDetails && mediaDetails.seasons) {
+      const currentSeasonObj = mediaDetails.seasons.find((s: any) => s.season_number === selectedSeason);
+      if (currentSeasonObj) {
+        setEpisodeCount(currentSeasonObj.episode_count || 20);
+      }
+    }
+  }, [selectedSeason, mediaDetails]);
 
   const getEmbedSources = (id: number, type: string, season = 1, episode = 1) => [
     { id: 'vidsrc_me', name: 'VidSrc Primary', quality: '1080p HD', domain: 'https://vidsrc.me', url: type === 'movie' ? `https://vidsrc.me/embed/movie?tmdb=${id}` : `https://vidsrc.me/embed/tv?tmdb=${id}&season=${season}&episode=${episode}` },
@@ -140,10 +151,11 @@ export default function WatchPage() {
   }
 
   const sources = getEmbedSources(Number(mediaId), media.media_type, selectedSeason, selectedEpisode);
+  const activeSourceUrl = sources[activeServer]?.url;
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans pb-16">
-      {/* Top Navigation Bar with Back Button */}
+      {/* Top Navigation Bar */}
       <div className="fixed top-0 left-0 right-0 z-40 bg-neutral-950/90 backdrop-blur border-b border-white/10 px-4 sm:px-8 py-3 flex items-center justify-between">
         <button
           onClick={() => router.back()}
@@ -159,6 +171,17 @@ export default function WatchPage() {
 
       <main className="max-w-5xl mx-auto px-4 pt-24 space-y-6">
         {/* Player Box */}
+        <div className="flex justify-end">
+          <a
+            href={activeSourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs font-semibold text-neutral-400 hover:text-white bg-neutral-900 border border-white/10 px-3 py-1.5 rounded-lg transition-all"
+          >
+            <ExternalLink size={14} /> Open Player in New Tab (Bypass Captcha)
+          </a>
+        </div>
+
         <div ref={playerContainerRef} className="relative aspect-video bg-black w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
           {isPlaying ? (
             <div className="relative w-full h-full">
@@ -177,9 +200,10 @@ export default function WatchPage() {
                 </button>
               )}
               <iframe
-                src={sources[activeServer]?.url}
+                src={activeSourceUrl}
                 className="w-full h-full border-0 absolute inset-0 z-10 pointer-events-auto"
                 allowFullScreen
+                sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-presentation"
                 allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
                 title="Stream Player"
               />
@@ -257,6 +281,7 @@ export default function WatchPage() {
             </div>
           </div>
 
+          {/* Season and Episode Dropdown Selectors */}
           {mediaDetails && media.media_type === 'tv' && mediaDetails.seasons && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-neutral-950 p-4 rounded-xl border border-white/5">
               <div>
@@ -264,7 +289,7 @@ export default function WatchPage() {
                 <select
                   value={selectedSeason}
                   onChange={(e) => { setSelectedSeason(Number(e.target.value)); setSelectedEpisode(1); }}
-                  className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-200 cursor-pointer"
+                  className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-200 cursor-pointer focus:outline-none focus:border-red-500"
                 >
                   {mediaDetails.seasons.filter((s: any) => s.season_number > 0).map((s: any) => (
                     <option key={s.id} value={s.season_number}>
@@ -273,16 +298,20 @@ export default function WatchPage() {
                   ))}
                 </select>
               </div>
+              
               <div>
-                <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase">Episode Number</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
+                <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase">Select Episode</label>
+                <select
                   value={selectedEpisode}
-                  onChange={(e) => setSelectedEpisode(Math.max(1, Number(e.target.value)))}
-                  className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-200"
-                />
+                  onChange={(e) => setSelectedEpisode(Number(e.target.value))}
+                  className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-200 cursor-pointer focus:outline-none focus:border-red-500"
+                >
+                  {[...Array(episodeCount)].map((_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      Episode {i + 1}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           )}
