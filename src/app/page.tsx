@@ -13,37 +13,37 @@ const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState('all');
-  const [heroMedia, setHeroMedia] = useState(null);
-  const [trending, setTrending] = useState([]);
-  const [popularMovies, setPopularMovies] = useState([]);
-  const [popularTV, setPopularTV] = useState([]);
-  const [topRated, setTopRated] = useState([]);
+  const [heroMedia, setHeroMedia] = useState<any>(null);
+  const [trending, setTrending] = useState<any[]>([]);
+  const [popularMovies, setPopularMovies] = useState<any[]>([]);
+  const [popularTV, setPopularTV] = useState<any[]>([]);
+  const [topRated, setTopRated] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedMedia, setSelectedMedia] = useState(null);
+  const [selectedMedia, setSelectedMedia] = useState<any>(null);
   const [activeServer, setActiveServer] = useState(0);
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
-  const [mediaDetails, setMediaDetails] = useState(null);
+  const [mediaDetails, setMediaDetails] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isShieldActive, setIsShieldActive] = useState(true);
   
-  const playerContainerRef = useRef(null);
-  const modalRef = useRef(null);
+  const playerContainerRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
-  // Auto-Check / Source Health States
-  const [serverStatuses, setServerStatuses] = useState({});
+  const [serverStatuses, setServerStatuses] = useState<Record<string, string>>({});
   const [isCheckingSources, setIsCheckingSources] = useState(false);
+  const [watchlist, setWatchlist] = useState<any[]>([]);
 
-  const [watchlist, setWatchlist] = useState(() => {
+  useEffect(() => {
     try {
       const saved = localStorage.getItem('masyanya_watchlist');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
+      if (saved) setWatchlist(JSON.parse(saved));
+    } catch (e) {
+      console.error('Could not load watchlist', e);
     }
-  });
+  }, []);
 
   useEffect(() => {
     try {
@@ -59,31 +59,7 @@ export default function App() {
     }
   }, [selectedMedia]);
 
-  // Anti-Popup Shield
-  useEffect(() => {
-    if (!isPlaying) return;
-
-    const originalOpen = window.open;
-    window.open = function(url, target, features) {
-      console.warn('Blocked popup redirection attempt to:', url);
-      return null;
-    };
-
-    const handleBeforeUnload = (e) => {
-      e.preventDefault();
-      e.returnValue = '';
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.open = originalOpen;
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [isPlaying]);
-
-  // 20 Stock Stream Sources
-  const getEmbedSources = (id, type, season = 1, episode = 1) => [
+  const getEmbedSources = (id: number, type: string, season = 1, episode = 1) => [
     { id: 'vidsrc_me', name: 'VidSrc Primary', quality: '1080p HD', domain: 'https://vidsrc.me', url: type === 'movie' ? `https://vidsrc.me/embed/movie?tmdb=${id}` : `https://vidsrc.me/embed/tv?tmdb=${id}&season=${season}&episode=${episode}` },
     { id: '2embed', name: '2Embed Prime', quality: '1080p / 720p', domain: 'https://www.2embed.cc', url: type === 'movie' ? `https://www.2embed.cc/embed/${id}` : `https://www.2embed.cc/embedtv/${id}&s=${season}&e=${episode}` },
     { id: 'polaris', name: 'Polaris V2', quality: '1080p HD', domain: 'https://vidsrc.cc', url: type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}` },
@@ -106,42 +82,34 @@ export default function App() {
     { id: 'cineb', name: 'CineB Feed', quality: '1080p HD', domain: 'https://cineb.rs', url: type === 'movie' ? `https://cineb.rs/embed/movie/${id}` : `https://cineb.rs/embed/tv/${id}/${season}/${episode}` }
   ];
 
-  const verifySourcesHealth = async (id, type, season, episode) => {
+  const verifySourcesHealth = async (id: number, type: string, season: number, episode: number) => {
     setIsCheckingSources(true);
     const sources = getEmbedSources(id, type, season, episode);
-    const statusMap = {};
-    let firstWorkingIdx = 0;
+    const statusMap: Record<string, string> = {};
 
     for (let i = 0; i < sources.length; i++) {
       const src = sources[i];
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 2500);
-        
+        const timeout = setTimeout(() => controller.abort(), 2000);
         await fetch(src.domain, { method: 'HEAD', mode: 'no-cors', signal: controller.signal });
         clearTimeout(timeout);
-        
         statusMap[src.id] = 'online';
       } catch {
-        if (['vidsrc_me', 'polaris', 'vidsrc_to', 'embed_su'].includes(src.id)) {
-          statusMap[src.id] = 'online';
-        } else {
-          statusMap[src.id] = 'no-stream';
-        }
+        statusMap[src.id] = ['vidsrc_me', 'polaris', 'vidsrc_to', 'embed_su'].includes(src.id) ? 'online' : 'no-stream';
       }
     }
 
     setServerStatuses(statusMap);
     setIsCheckingSources(false);
-    setActiveServer(firstWorkingIdx);
   };
 
   const triggerFullscreen = () => {
     if (playerContainerRef.current) {
       if (playerContainerRef.current.requestFullscreen) {
         playerContainerRef.current.requestFullscreen().catch(() => {});
-      } else if (playerContainerRef.current.webkitRequestFullscreen) {
-        playerContainerRef.current.webkitRequestFullscreen();
+      } else if ((playerContainerRef.current as any).webkitRequestFullscreen) {
+        (playerContainerRef.current as any).webkitRequestFullscreen();
       }
     }
   };
@@ -161,7 +129,7 @@ export default function App() {
         const tvData = await tvRes.json();
         const topData = await topRes.json();
 
-        const filteredTrending = (trendingData.results || []).filter(item => item.backdrop_path);
+        const filteredTrending = (trendingData.results || []).filter((item: any) => item.backdrop_path);
         setTrending(filteredTrending);
         setPopularMovies(moviesData.results || []);
         setPopularTV(tvData.results || []);
@@ -192,7 +160,7 @@ export default function App() {
           `${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(searchQuery)}`
         );
         const data = await res.json();
-        setSearchResults((data.results || []).filter(item => item.poster_path || item.backdrop_path));
+        setSearchResults((data.results || []).filter((item: any) => item.poster_path || item.backdrop_path));
       } catch (err) {
         console.error('Search error:', err);
       } finally {
@@ -230,7 +198,7 @@ export default function App() {
     verifySourcesHealth(selectedMedia.id, type, selectedSeason, selectedEpisode);
   }, [selectedMedia, selectedSeason, selectedEpisode]);
 
-  const toggleWatchlist = (media) => {
+  const toggleWatchlist = (media: any) => {
     const exists = watchlist.some(item => item.id === media.id);
     if (exists) {
       setWatchlist(watchlist.filter(item => item.id !== media.id));
@@ -239,7 +207,7 @@ export default function App() {
     }
   };
 
-  const isSaved = (mediaId) => watchlist.some(item => item.id === mediaId);
+  const isSaved = (mediaId: number) => watchlist.some(item => item.id === mediaId);
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans selection:bg-red-600 selection:text-white pb-16">
@@ -248,7 +216,8 @@ export default function App() {
           <div className="flex items-center justify-between w-full md:w-auto gap-4">
             <button 
               onClick={() => { setSearchQuery(''); setCurrentTab('all'); }} 
-              className="text-2xl sm:text-3xl font-black tracking-tight focus:outline-none"
+              onPointerDown={(e) => { e.preventDefault(); setSearchQuery(''); setCurrentTab('all'); }}
+              className="text-2xl sm:text-3xl font-black tracking-tight focus:outline-none cursor-pointer"
             >
               <span className="bg-gradient-to-r from-red-500 via-rose-500 to-red-600 bg-clip-text text-transparent">
                 masyanya
@@ -267,7 +236,8 @@ export default function App() {
                   <button
                     key={tab.id}
                     onClick={() => { setCurrentTab(tab.id); setSearchQuery(''); }}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-red-500 ${
+                    onPointerDown={(e) => { e.preventDefault(); setCurrentTab(tab.id); setSearchQuery(''); }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all whitespace-nowrap cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 ${
                       currentTab === tab.id 
                         ? 'bg-red-600 text-white shadow-md shadow-red-600/20' 
                         : 'text-neutral-400 hover:text-white hover:bg-white/5'
@@ -292,7 +262,11 @@ export default function App() {
                 className="w-full bg-neutral-900 border border-white/10 rounded-full pl-10 pr-10 py-1.5 text-xs sm:text-sm text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="absolute right-3 text-neutral-400 hover:text-white p-1">
+                <button 
+                  onClick={() => setSearchQuery('')} 
+                  onPointerDown={(e) => { e.preventDefault(); setSearchQuery(''); }}
+                  className="absolute right-3 text-neutral-400 hover:text-white p-1 cursor-pointer"
+                >
                   <X className="w-4 h-4" />
                 </button>
               )}
@@ -352,7 +326,6 @@ export default function App() {
                     alt={heroMedia.title || heroMedia.name}
                     className="w-full h-full object-cover object-center filter brightness-90"
                   />
-                  {/* Solid gradient fallback layers that WebOS handles cleanly without breaking */}
                   <div className="absolute inset-0 bg-neutral-950/60" />
                   <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/20 to-transparent" />
                   <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/40 to-transparent" />
@@ -381,7 +354,8 @@ export default function App() {
                     <div className="flex flex-wrap items-center gap-3 pt-2">
                       <button
                         onClick={() => setSelectedMedia(heroMedia)}
-                        className="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-all shadow-lg shadow-red-600/30 focus:outline-none focus:ring-4 focus:ring-red-500"
+                        onPointerDown={(e) => { e.preventDefault(); setSelectedMedia(heroMedia); }}
+                        className="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-all shadow-lg shadow-red-600/30 cursor-pointer focus:outline-none focus:ring-4 focus:ring-red-500"
                       >
                         <Play className="w-5 h-5 fill-current" />
                         Watch Now
@@ -389,7 +363,8 @@ export default function App() {
 
                       <button
                         onClick={() => setSelectedMedia(heroMedia)}
-                        className="flex items-center gap-2 px-5 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-medium transition-all border border-white/10 focus:outline-none focus:ring-2 focus:ring-white"
+                        onPointerDown={(e) => { e.preventDefault(); setSelectedMedia(heroMedia); }}
+                        className="flex items-center gap-2 px-5 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-medium transition-all border border-white/10 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white"
                       >
                         <Info className="w-5 h-5" />
                         More Info
@@ -397,7 +372,8 @@ export default function App() {
 
                       <button
                         onClick={() => toggleWatchlist(heroMedia)}
-                        className={`p-3 rounded-xl transition-all border focus:outline-none focus:ring-2 focus:ring-red-500 ${
+                        onPointerDown={(e) => { e.preventDefault(); toggleWatchlist(heroMedia); }}
+                        className={`p-3 rounded-xl transition-all border cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 ${
                           isSaved(heroMedia.id)
                             ? 'bg-red-600/20 border-red-500 text-red-500'
                             : 'bg-neutral-800 hover:bg-neutral-700 border-white/10 text-white'
@@ -448,7 +424,8 @@ export default function App() {
           <div className="relative w-full max-w-5xl bg-neutral-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden my-auto">
             <button
               onClick={() => { setSelectedMedia(null); setIsPlaying(false); setIsShieldActive(true); setActiveServer(0); }}
-              className="absolute top-4 right-4 z-30 p-2.5 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-all border border-white/10 focus:outline-none focus:ring-4 focus:ring-red-500"
+              onPointerDown={(e) => { e.preventDefault(); setSelectedMedia(null); setIsPlaying(false); setIsShieldActive(true); setActiveServer(0); }}
+              className="absolute top-4 right-4 z-30 p-2.5 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-all border border-white/15 cursor-pointer focus:outline-none focus:ring-4 focus:ring-red-500"
             >
               <X className="w-5 h-5" />
             </button>
@@ -469,8 +446,9 @@ export default function App() {
                         e.stopPropagation();
                         setIsShieldActive(false);
                       }}
-                      onTouchEnd={(e) => {
+                      onPointerDown={(e) => {
                         e.stopPropagation();
+                        e.preventDefault();
                         setIsShieldActive(false);
                       }}
                       className="absolute inset-0 z-30 w-full h-full bg-neutral-950/80 cursor-pointer flex flex-col items-center justify-center gap-3 p-4 text-center focus:outline-none focus:ring-4 focus:ring-red-500"
@@ -520,7 +498,12 @@ export default function App() {
                         setIsPlaying(true);
                         setTimeout(triggerFullscreen, 300);
                       }}
-                      className="w-20 h-20 rounded-full bg-red-600 text-white flex items-center justify-center shadow-2xl shadow-red-600/50 focus:outline-none focus:ring-4 focus:ring-red-500"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        setIsPlaying(true);
+                        setTimeout(triggerFullscreen, 300);
+                      }}
+                      className="w-20 h-20 rounded-full bg-red-600 text-white flex items-center justify-center shadow-2xl shadow-red-600/50 cursor-pointer focus:outline-none focus:ring-4 focus:ring-red-500"
                     >
                       <Play className="w-9 h-9 fill-current ml-1" />
                     </button>
@@ -562,8 +545,15 @@ export default function App() {
                             setIsShieldActive(true);
                           }
                         }}
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          if (!isNoStream) {
+                            setActiveServer(idx);
+                            setIsShieldActive(true);
+                          }
+                        }}
                         disabled={isNoStream}
-                        className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all focus:outline-none focus:ring-2 focus:ring-red-500 ${
+                        className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 ${
                           activeServer === idx
                             ? 'bg-red-600/20 border-red-500 text-white shadow-lg shadow-red-600/20'
                             : isNoStream
@@ -597,9 +587,9 @@ export default function App() {
                         setSelectedSeason(Number(e.target.value));
                         setSelectedEpisode(1);
                       }}
-                      className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-200 focus:outline-none focus:border-red-500"
+                      className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-200 focus:outline-none focus:border-red-500 cursor-pointer"
                     >
-                      {mediaDetails.seasons.filter(s => s.season_number > 0).map(s => (
+                      {mediaDetails.seasons.filter((s: any) => s.season_number > 0).map((s: any) => (
                         <option key={s.id} value={s.season_number}>
                           Season {s.season_number} ({s.episode_count} Episodes)
                         </option>
@@ -630,7 +620,8 @@ export default function App() {
                   </h2>
                   <button
                     onClick={() => toggleWatchlist(selectedMedia)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border focus:outline-none focus:ring-2 focus:ring-red-500 ${
+                    onPointerDown={(e) => { e.preventDefault(); toggleWatchlist(selectedMedia); }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 ${
                       isSaved(selectedMedia.id)
                         ? 'bg-red-600/20 border-red-500 text-red-500'
                         : 'bg-neutral-800 hover:bg-neutral-700 border-white/10 text-white'
@@ -661,7 +652,7 @@ export default function App() {
   );
 }
 
-function MediaSection({ title, items, onSelect }) {
+function MediaSection({ title, items, onSelect }: { title: string; items: any[]; onSelect: (media: any) => void }) {
   if (!items || items.length === 0) return null;
 
   return (
@@ -679,7 +670,7 @@ function MediaSection({ title, items, onSelect }) {
   );
 }
 
-function MediaCard({ media, onClick }) {
+function MediaCard({ media, onClick }: { media: any; onClick: () => void }) {
   const posterUrl = media.poster_path 
     ? `${POSTER_BASE_URL}${media.poster_path}` 
     : 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=80';
@@ -689,6 +680,10 @@ function MediaCard({ media, onClick }) {
       type="button"
       tabIndex={0}
       onClick={onClick}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        onClick();
+      }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ' || e.keyCode === 13 || e.keyCode === 32) {
           e.preventDefault();
@@ -701,10 +696,10 @@ function MediaCard({ media, onClick }) {
         <img
           src={posterUrl}
           alt={media.title || media.name}
-          className="w-full h-full object-cover group-hover:scale-110 group-focus:scale-110 transition-transform duration-500"
+          className="w-full h-full object-cover group-hover:scale-110 group-focus:scale-110 transition-transform duration-500 pointer-events-none"
           loading="lazy"
         />
-        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
           <div className="w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-600/50">
             <Play className="w-6 h-6 fill-current ml-0.5" />
           </div>
@@ -717,7 +712,7 @@ function MediaCard({ media, onClick }) {
         )}
       </div>
 
-      <div className="p-3 flex flex-col flex-1 justify-between bg-neutral-900 w-full">
+      <div className="p-3 flex flex-col flex-1 justify-between bg-neutral-900 w-full pointer-events-none">
         <h3 className="text-xs font-bold text-neutral-200 line-clamp-1 group-hover:text-red-500 group-focus:text-red-500 transition-colors">
           {media.title || media.name}
         </h3>
