@@ -208,12 +208,12 @@ export default function WatchPage() {
         </div>
       </main>
 
-      {/* Fully Centered Modal Drawer */}
+      {/* Bulletproof Inline-Styled Center Modal for webOS TV */}
       {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto bg-neutral-900 border border-white/15 rounded-2xl shadow-2xl p-6 space-y-6 my-auto">
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 999999, backgroundColor: 'rgba(0,0,0,0.85)' }}>
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '90%', maxWidth: '580px', maxHeight: '85vh', overflowY: 'auto', backgroundColor: '#171717', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9)' }}>
             
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
               <div>
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                   <Settings className="w-5 h-5 text-red-500" /> Playback & Source Settings
@@ -230,17 +230,17 @@ export default function WatchPage() {
             </div>
 
             {/* Source Grid */}
-            <div className="space-y-3">
+            <div className="space-y-3 mb-4">
               <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">
                 Available Working Sources:
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-56 overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-52 overflow-y-auto pr-1">
                 {sources.map((srv, idx) => (
                   <button
                     key={srv.id}
                     onClick={() => { setActiveServer(idx); setPlayerKey(prev => prev + 1); setIsSettingsOpen(false); setIsPlaying(true); }}
                     onPointerDown={(e) => { e.preventDefault(); setActiveServer(idx); setPlayerKey(prev => prev + 1); setIsSettingsOpen(false); setIsPlaying(true); }}
-                    className={`flex items-center justify-between p-3.5 rounded-xl border text-left transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 ${
+                    className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 ${
                       activeServer === idx
                         ? 'bg-red-600/20 border-red-500 text-white shadow-lg shadow-red-600/20'
                         : 'bg-neutral-800/80 border-white/5 text-neutral-300 hover:bg-neutral-800 hover:text-white'
@@ -260,7 +260,7 @@ export default function WatchPage() {
 
             {/* Season and Episode Selectors (For TV Shows) */}
             {mediaDetails && media.media_type === 'tv' && mediaDetails.seasons && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-neutral-950 p-4 rounded-xl border border-white/5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-neutral-950 p-4 rounded-xl border border-white/5 mb-4">
                 <div>
                   <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase">Select Season</label>
                   <select
