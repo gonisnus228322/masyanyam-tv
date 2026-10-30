@@ -208,12 +208,12 @@ export default function WatchPage() {
         </div>
       </main>
 
-      {/* Force-Centered Screen Modal Drawer */}
+      {/* Fully Centered Modal Drawer */}
       {isSettingsOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.85)' }}>
-          <div style={{ width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', backgroundColor: '#171717', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)' }}>
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto bg-neutral-900 border border-white/15 rounded-2xl shadow-2xl p-6 space-y-6 my-auto">
             
-            <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div>
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                   <Settings className="w-5 h-5 text-red-500" /> Playback & Source Settings
@@ -230,7 +230,7 @@ export default function WatchPage() {
             </div>
 
             {/* Source Grid */}
-            <div className="space-y-3 mb-4">
+            <div className="space-y-3">
               <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">
                 Available Working Sources:
               </label>
@@ -260,7 +260,7 @@ export default function WatchPage() {
 
             {/* Season and Episode Selectors (For TV Shows) */}
             {mediaDetails && media.media_type === 'tv' && mediaDetails.seasons && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-neutral-950 p-4 rounded-xl border border-white/5 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-neutral-950 p-4 rounded-xl border border-white/5">
                 <div>
                   <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase">Select Season</label>
                   <select
@@ -269,4 +269,43 @@ export default function WatchPage() {
                     className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-200 cursor-pointer focus:outline-none focus:border-red-500"
                   >
                     {mediaDetails.seasons.filter((s: any) => s.season_number > 0).map((s: any) => (
-                      <option key={s.id
+                      <option key={s.id} value={s.season_number}>
+                        Season {s.season_number} ({s.episode_count} Episodes)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase">Select Episode</label>
+                  <select
+                    value={selectedEpisode}
+                    onChange={(e) => { setSelectedEpisode(Number(e.target.value)); setPlayerKey(prev => prev + 1); }}
+                    className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-200 cursor-pointer focus:outline-none focus:border-red-500"
+                  >
+                    {[...Array(episodeCount)].map((_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        Episode {i + 1}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2 border-t border-white/10">
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                onPointerDown={(e) => { e.preventDefault(); setIsSettingsOpen(false); }}
+                className="bg-neutral-800 hover:bg-neutral-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold cursor-pointer transition-all border border-white/10"
+              >
+                Close Settings
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
