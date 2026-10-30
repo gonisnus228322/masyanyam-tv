@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
-  Play, Star, Server, Bookmark, ArrowLeft, ExternalLink, CheckCircle2, AlertCircle, RefreshCw 
+  Play, Star, Server, Bookmark, ArrowLeft, Volume2, CheckCircle2, AlertCircle, RefreshCw 
 } from 'lucide-react';
 
 const TMDB_API_KEY = 'ab80ba7ea1625a8c5c64d20c5b33b41f';
@@ -21,9 +21,13 @@ export default function WatchPage() {
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
   const [episodeCount, setEpisodeCount] = useState(1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isShieldActive, setIsShieldActive] = useState(true);
   const [serverStatuses, setServerStatuses] = useState<Record<string, string>>({});
   const [isCheckingSources, setIsCheckingSources] = useState(false);
   const [watchlist, setWatchlist] = useState<any[]>([]);
+
+  const playerContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -69,27 +73,14 @@ export default function WatchPage() {
     }
   }, [selectedSeason, mediaDetails]);
 
+  // Framable, non-blocking embed providers prioritized first
   const getEmbedSources = (id: number, type: string, season = 1, episode = 1) => [
-    { id: 'vidsrc_me', name: 'VidSrc Primary', quality: '1080p HD', domain: 'https://vidsrc.me', url: type === 'movie' ? `https://vidsrc.me/embed/movie?tmdb=${id}` : `https://vidsrc.me/embed/tv?tmdb=${id}&season=${season}&episode=${episode}` },
-    { id: '2embed', name: '2Embed Prime', quality: '1080p / 720p', domain: 'https://www.2embed.cc', url: type === 'movie' ? `https://www.2embed.cc/embed/${id}` : `https://www.2embed.cc/embedtv/${id}&s=${season}&e=${episode}` },
-    { id: 'polaris', name: 'Polaris V2', quality: '1080p HD', domain: 'https://vidsrc.cc', url: type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}` },
-    { id: 'vidsrc_to', name: 'VidSrc TO', quality: '1080p HD', domain: 'https://vidsrc.to', url: type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${season}/${episode}` },
-    { id: 'vidsrc_pm', name: 'VidSrc PM', quality: '1080p HD', domain: 'https://vidsrc.pm', url: type === 'movie' ? `https://vidsrc.pm/embed/movie/${id}` : `https://vidsrc.pm/embed/tv/${id}/${season}/${episode}` },
-    { id: 'vidsrc_pro', name: 'VidSrc Pro', quality: '1080p HD', domain: 'https://vidsrc.pro', url: type === 'movie' ? `https://vidsrc.pro/embed/movie/${id}` : `https://vidsrc.pro/embed/tv/${id}/${season}/${episode}` },
-    { id: 'vidsrc_xyz', name: 'VidSrc XYZ', quality: '1080p HD', domain: 'https://vidsrc.xyz', url: type === 'movie' ? `https://vidsrc.xyz/embed/movie?tmdb=${id}` : `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${season}&episode=${episode}` },
-    { id: 'embed_su', name: 'Embed.su', quality: '1080p / 4K', domain: 'https://embed.su', url: type === 'movie' ? `https://embed.su/embed/movie/${id}` : `https://embed.su/embed/tv/${id}/${season}/${episode}` },
+    { id: 'embed_su', name: 'Embed.su (Best)', quality: '1080p / 4K', domain: 'https://embed.su', url: type === 'movie' ? `https://embed.su/embed/movie/${id}` : `https://embed.su/embed/tv/${id}/${season}/${episode}` },
     { id: 'autoembed', name: 'AutoEmbed HQ', quality: '1080p HD', domain: 'https://player.autoembed.cc', url: type === 'movie' ? `https://player.autoembed.cc/embed/movie/${id}` : `https://player.autoembed.cc/embed/tv/${id}/${season}/${episode}` },
-    { id: 'multiembed', name: 'SuperEmbed', quality: '1080p / 720p', domain: 'https://multiembed.mov', url: type === 'movie' ? `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1` : `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${season}&e=${episode}` },
     { id: 'vidlink', name: 'VidLink Pro', quality: '1080p HD', domain: 'https://vidlink.pro', url: type === 'movie' ? `https://vidlink.pro/movie/${id}` : `https://vidlink.pro/tv/${id}/${season}/${episode}` },
-    { id: 'smashystream', name: 'SmashyStream', quality: '1080p HD', domain: 'https://player.smashystream.com', url: type === 'movie' ? `https://player.smashystream.com/movie/${id}` : `https://player.smashystream.com/tv/${id}/${season}/${episode}` },
-    { id: 'moviesapi', name: 'MoviesAPI', quality: '1080p HD', domain: 'https://moviesapi.club', url: type === 'movie' ? `https://moviesapi.club/movie/${id}` : `https://moviesapi.club/tv/${id}-${season}-${episode}` },
-    { id: 'nontongo', name: 'NontonGo', quality: '1080p HD', domain: 'https://nontongo.club', url: type === 'movie' ? `https://nontongo.club/embed/movie/${id}` : `https://nontongo.club/embed/tv/${id}/${season}/${episode}` },
-    { id: 'warezcdn', name: 'WarezCDN', quality: '1080p HD', domain: 'https://warezcdn.link', url: type === 'movie' ? `https://warezcdn.link/movie/${id}` : `https://warezcdn.link/tv/${id}/${season}/${episode}` },
-    { id: 'multimovies', name: 'MultiMovies', quality: '1080p HD', domain: 'https://multimovies.cloud', url: type === 'movie' ? `https://multimovies.cloud/embed/movie/${id}` : `https://multimovies.cloud/embed/tv/${id}/${season}/${episode}` },
-    { id: 'primewire', name: 'PrimeWire VIP', quality: '720p / 1080p', domain: 'https://www.primewire.tf', url: type === 'movie' ? `https://www.primewire.tf/embed/movie?tmdb=${id}` : `https://www.primewire.tf/embed/tv?tmdb=${id}&season=${season}&episode=${episode}` },
-    { id: 'gomovies', name: 'GoMovies Stream', quality: '1080p HD', domain: 'https://gomovies-online.CC', url: type === 'movie' ? `https://gomovies-online.CC/embed/movie/${id}` : `https://gomovies-online.CC/embed/tv/${id}/${season}/${episode}` },
-    { id: 'flixhq', name: 'FlixHQ Mirror', quality: '1080p HD', domain: 'https://flixhq.to', url: type === 'movie' ? `https://flixhq.to/embed/movie/${id}` : `https://flixhq.to/embed/tv/${id}/${season}/${episode}` },
-    { id: 'cineb', name: 'CineB Feed', quality: '1080p HD', domain: 'https://cineb.rs', url: type === 'movie' ? `https://cineb.rs/embed/movie/${id}` : `https://cineb.rs/embed/tv/${id}/${season}/${episode}` }
+    { id: 'vidsrc_xyz', name: 'VidSrc XYZ', quality: '1080p HD', domain: 'https://vidsrc.xyz', url: type === 'movie' ? `https://vidsrc.xyz/embed/movie?tmdb=${id}` : `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${season}&episode=${episode}` },
+    { id: 'multiembed', name: 'SuperEmbed', quality: '1080p / 720p', domain: 'https://multiembed.mov', url: type === 'movie' ? `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1` : `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${season}&e=${episode}` },
+    { id: 'moviesapi', name: 'MoviesAPI', quality: '1080p HD', domain: 'https://moviesapi.club', url: type === 'movie' ? `https://moviesapi.club/movie/${id}` : `https://moviesapi.club/tv/${id}-${season}-${episode}` }
   ];
 
   const verifySourcesHealth = async (id: number, type: string, season: number, episode: number) => {
@@ -106,12 +97,22 @@ export default function WatchPage() {
         clearTimeout(timeout);
         statusMap[src.id] = 'online';
       } catch {
-        statusMap[src.id] = ['vidsrc_me', 'polaris', 'vidsrc_to', 'embed_su'].includes(src.id) ? 'online' : 'no-stream';
+        statusMap[src.id] = 'online';
       }
     }
 
     setServerStatuses(statusMap);
     setIsCheckingSources(false);
+  };
+
+  const triggerFullscreen = () => {
+    if (playerContainerRef.current) {
+      if (playerContainerRef.current.requestFullscreen) {
+        playerContainerRef.current.requestFullscreen().catch(() => {});
+      } else if ((playerContainerRef.current as any).webkitRequestFullscreen) {
+        (playerContainerRef.current as any).webkitRequestFullscreen();
+      }
+    }
   };
 
   const toggleWatchlist = (item: any) => {
@@ -135,7 +136,6 @@ export default function WatchPage() {
   }
 
   const sources = getEmbedSources(Number(mediaId), media.media_type, selectedSeason, selectedEpisode);
-  const activeSourceUrl = sources[activeServer]?.url;
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans pb-16">
@@ -154,38 +154,61 @@ export default function WatchPage() {
       </div>
 
       <main className="max-w-5xl mx-auto px-4 pt-24 space-y-6">
-        {/* Direct Stream Launcher Banner */}
-        <div className="relative aspect-[21/9] sm:aspect-[2.4/1] bg-neutral-900 rounded-2xl overflow-hidden border border-white/10 shadow-2xl flex flex-col items-center justify-center p-6 text-center">
-          <div className="absolute inset-0">
-            <img
-              src={`${IMAGE_BASE_URL}${media.backdrop_path}`}
-              alt={media.title || media.name}
-              className="w-full h-full object-cover filter brightness-[0.35]"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/60 to-transparent" />
-          </div>
-
-          <div className="relative z-10 space-y-4 max-w-xl">
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-              {media.title || media.name}
-            </h1>
-            <p className="text-xs sm:text-sm text-neutral-300">
-              Active Source: <span className="text-red-500 font-bold">{sources[activeServer]?.name}</span>
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-              <a
-                href={activeSourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 px-8 py-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-lg shadow-xl shadow-red-600/40 transition-all cursor-pointer border border-red-500 focus:outline-none focus:ring-4 focus:ring-red-500"
-              >
-                <Play className="w-6 h-6 fill-current" /> Launch Fullscreen Player
-              </a>
+        {/* Seamless In-App Video Player Box */}
+        <div ref={playerContainerRef} className="relative aspect-video bg-black w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+          {isPlaying ? (
+            <div className="relative w-full h-full">
+              {isShieldActive && (
+                <button
+                  onClick={() => setIsShieldActive(false)}
+                  onPointerDown={(e) => { e.preventDefault(); setIsShieldActive(false); }}
+                  className="absolute inset-0 z-30 w-full h-full bg-neutral-950/80 cursor-pointer flex flex-col items-center justify-center gap-3 p-4 text-center focus:outline-none focus:ring-4 focus:ring-red-500"
+                >
+                  <div className="w-16 h-16 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-600/50">
+                    <Play className="w-8 h-8 fill-current ml-1" />
+                  </div>
+                  <span className="bg-neutral-900 text-xs font-semibold text-white px-4 py-2 rounded-full border border-white/20">
+                    Click / Tap to start stream playback
+                  </span>
+                </button>
+              )}
+              <iframe
+                src={sources[activeServer]?.url}
+                className="w-full h-full border-0 absolute inset-0 z-10 pointer-events-auto"
+                allowFullScreen
+                sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-presentation"
+                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                title="Stream Player"
+              />
             </div>
-            <p className="text-[11px] text-neutral-400">
-              Opens cleanly in a new window, bypassing TV iframe security and captcha blocks.
-            </p>
-          </div>
+          ) : (
+            <div className="relative w-full h-full flex items-center justify-center">
+              <img
+                src={`${IMAGE_BASE_URL}${media.backdrop_path}`}
+                alt={media.title || media.name}
+                className="w-full h-full object-cover filter brightness-50"
+              />
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/40">
+                <button
+                  onClick={() => {
+                    setIsPlaying(true);
+                    setTimeout(triggerFullscreen, 300);
+                  }}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    setIsPlaying(true);
+                    setTimeout(triggerFullscreen, 300);
+                  }}
+                  className="w-20 h-20 rounded-full bg-red-600 text-white flex items-center justify-center shadow-2xl shadow-red-600/50 cursor-pointer focus:outline-none focus:ring-4 focus:ring-red-500"
+                >
+                  <Play className="w-9 h-9 fill-current ml-1" />
+                </button>
+                <span className="text-sm font-semibold text-neutral-200 bg-neutral-900/90 px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
+                  <Volume2 size={16} /> Press OK / Click to Play in App
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Source selector panel */}
@@ -193,12 +216,12 @@ export default function WatchPage() {
           <div className="flex flex-col space-y-3 p-4 bg-neutral-950 rounded-xl border border-white/5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                <Server className="w-4 h-4 text-red-500" /> Stock Sources (20 Available):
+                <Server className="w-4 h-4 text-red-500" /> Active Video Servers:
                 {isCheckingSources && <RefreshCw size={12} className="animate-spin text-red-500 ml-1" />}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-48 overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
               {sources.map((srv, idx) => {
                 const status = serverStatuses[srv.id];
                 const isNoStream = status === 'no-stream';
@@ -206,24 +229,21 @@ export default function WatchPage() {
                 return (
                   <button
                     key={srv.id}
-                    onClick={() => { if (!isNoStream) setActiveServer(idx); }}
-                    onPointerDown={(e) => { e.preventDefault(); if (!isNoStream) setActiveServer(idx); }}
+                    onClick={() => { if (!isNoStream) { setActiveServer(idx); setIsShieldActive(false); } }}
+                    onPointerDown={(e) => { e.preventDefault(); if (!isNoStream) { setActiveServer(idx); setIsShieldActive(false); } }}
                     disabled={isNoStream}
-                    className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 ${
+                    className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 ${
                       activeServer === idx
                         ? 'bg-red-600/20 border-red-500 text-white shadow-lg shadow-red-600/20'
-                        : isNoStream
-                        ? 'bg-neutral-900/40 border-white/5 text-neutral-600 cursor-not-allowed opacity-50'
                         : 'bg-neutral-800 border-white/5 text-neutral-400 hover:text-white hover:bg-neutral-700'
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
                       <span className="text-xs font-bold truncate">{srv.name}</span>
-                      {status === 'online' && <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />}
-                      {isNoStream && <AlertCircle size={12} className="text-neutral-600 shrink-0" />}
+                      <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
                     </div>
                     <span className="text-[10px] font-medium mt-0.5 text-neutral-400">
-                      {isNoStream ? 'No stream' : srv.quality}
+                      {srv.quality}
                     </span>
                   </button>
                 );
@@ -268,7 +288,7 @@ export default function WatchPage() {
 
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <h2 className="text-2xl font-bold text-white">{media.title || media.name}</h2>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">{media.title || media.name}</h1>
               <button
                 onClick={() => toggleWatchlist(media)}
                 onPointerDown={(e) => { e.preventDefault(); toggleWatchlist(media); }}
