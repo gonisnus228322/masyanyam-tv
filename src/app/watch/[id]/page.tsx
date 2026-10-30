@@ -3,12 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
-  Star, Bookmark, ArrowLeft, Settings, X, CheckCircle2, ShieldCheck, Zap 
+  Star, Bookmark, ArrowLeft, Settings, X, CheckCircle2, Zap 
 } from 'lucide-react';
 
 const TMDB_API_KEY = 'ab80ba7ea1625a8c5c64d20c5b33b41f';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/original';
 
 export default function WatchPage() {
   const params = useParams();
@@ -17,7 +16,7 @@ export default function WatchPage() {
 
   const [media, setMedia] = useState<any>(null);
   const [mediaDetails, setMediaDetails] = useState<any>(null);
-  const [activeServer, setActiveServer] = useState(0);
+  const [activeServer, setActiveServer] = useState(0); // Index 0 is VidLink Pro
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
   const [episodeCount, setEpisodeCount] = useState(1);
@@ -67,10 +66,10 @@ export default function WatchPage() {
     }
   }, [selectedSeason, mediaDetails]);
 
-  // Revamped high-speed streaming sources optimized for webOS & iframe compatibility
+  // VidLink Pro set as the default streamer (Index 0)
   const getEmbedSources = (id: number, type: string, season = 1, episode = 1) => [
-    { id: 'embed_su', name: 'Embed.su (Ultra Fast)', quality: '1080p / 4K', url: type === 'movie' ? `https://embed.su/embed/movie/${id}` : `https://embed.su/embed/tv/${id}/${season}/${episode}` },
-    { id: 'vidlink', name: 'VidLink Pro (HQ)', quality: '1080p HD', url: type === 'movie' ? `https://vidlink.pro/movie/${id}` : `https://vidlink.pro/tv/${id}/${season}/${episode}` },
+    { id: 'vidlink', name: 'VidLink Pro (Default HQ)', quality: '1080p HD', url: type === 'movie' ? `https://vidlink.pro/movie/${id}` : `https://vidlink.pro/tv/${id}/${season}/${episode}` },
+    { id: 'embed_su', name: 'Embed.su (Fast)', quality: '1080p / 4K', url: type === 'movie' ? `https://embed.su/embed/movie/${id}` : `https://embed.su/embed/tv/${id}/${season}/${episode}` },
     { id: 'autoembed', name: 'AutoEmbed Secure', quality: '1080p HD', url: type === 'movie' ? `https://player.autoembed.cc/embed/movie/${id}` : `https://player.autoembed.cc/embed/tv/${id}/${season}/${episode}` },
     { id: 'vidsrc_cc', name: 'VidSrc V2 Prime', quality: '1080p HD', url: type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}` },
     { id: 'multiembed', name: 'SuperEmbed Stream', quality: '1080p / 720p', url: type === 'movie' ? `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1` : `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${season}&e=${episode}` },
@@ -125,14 +124,15 @@ export default function WatchPage() {
         </div>
       </div>
 
-      {/* Fullscreen Video Player Frame */}
+      {/* Fullscreen Video Player Frame with TV-Optimized Attributes */}
       <div className="relative w-full h-full bg-black flex-1">
         <iframe
           key={`${activeServer}-${selectedSeason}-${selectedEpisode}`}
           src={sources[activeServer]?.url}
           className="w-full h-full border-0 absolute inset-0 z-10 pointer-events-auto"
           allowFullScreen
-          allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope"
+          referrerPolicy="origin"
           title="Stream Player"
         />
       </div>
@@ -157,7 +157,7 @@ export default function WatchPage() {
               </button>
             </div>
 
-            {/* Revamped Source Grid */}
+            {/* Source Grid */}
             <div className="space-y-3">
               <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">
                 Available Working Sources:
