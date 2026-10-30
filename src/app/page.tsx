@@ -10,16 +10,21 @@ import {
 const TMDB_API_KEY = 'ab80ba7ea1625a8c5c64d20c5b33b41f';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/original';
-const POSTER_MENU_URL = 'https://image.tmdb.org/t/p/w780'; // Optimized 780p for fast home menu loading
+const POSTER_MENU_URL = 'https://image.tmdb.org/t/p/w780';
 
 export default function App() {
   const router = useRouter();
   const [currentTab, setCurrentTab] = useState('all');
   const [heroMedia, setHeroMedia] = useState<any>(null);
+  
+  // Data States
   const [trending, setTrending] = useState<any[]>([]);
   const [popularMovies, setPopularMovies] = useState<any[]>([]);
   const [popularTV, setPopularTV] = useState<any[]>([]);
-  const [topRated, setTopRated] = useState<any[]>([]);
+  const [topRatedMovies, setTopRatedMovies] = useState<any[]>([]);
+  const [topRatedTV, setTopRatedTV] = useState<any[]>([]);
+  const [trendingTV, setTrendingTV] = useState<any[]>([]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -35,26 +40,47 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const fetchContent = async () => {
+    const fetchAllContent = async () => {
       try {
-        const [trendingRes, moviesRes, tvRes, topRes] = await Promise.all([
+        const [
+          trendingRes, 
+          moviesRes, 
+          tvRes, 
+          topMoviesRes, 
+          topTvRes,
+          trendingTvRes
+        ] = await Promise.all([
           fetch(`${TMDB_BASE_URL}/trending/all/week?api_key=${TMDB_API_KEY}`),
           fetch(`${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}`),
           fetch(`${TMDB_BASE_URL}/tv/popular?api_key=${TMDB_API_KEY}`),
-          fetch(`${TMDB_BASE_URL}/movie/top_rated?api_key=${TMDB_API_KEY}`)
+          fetch(`${TMDB_BASE_URL}/movie/top_rated?api_key=${TMDB_API_KEY}`),
+          fetch(`${TMDB_BASE_URL}/tv/top_rated?api_key=${TMDB_API_KEY}`),
+          fetch(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}`)
         ]);
 
         const trendingData = await trendingRes.json();
         const moviesData = await moviesRes.json();
         const tvData = await tvRes.json();
-        const topData = await topRes.json();
+        const topMoviesData = await topMoviesRes.json();
+        const topTvData = await topTvRes.json();
+        const trendingTvData = await trendingTvRes.json();
+
+        // Helper to sort by vote_average descending
+        const sortByRating = (list: any[]) => 
+          [...(list || [])].sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
 
         const filteredTrending = (trendingData.results || []).filter((item: any) => item.backdrop_path);
-        setTrending(filteredTrending);
-        setPopularMovies(moviesData.results || []);
-        setPopularTV(tvData.results || []);
-        setTopRated(topData.results || []);
+        const sortedTopMovies = sortByRating(topMoviesData.results || []);
+        const sortedTopTV = sortByRating(topTvData.results || []);
 
+        setTrending(filteredTrending);
+        setPopularMovies(sortByRating(moviesData.results || []));
+        setPopularTV(sortByRating(tvData.results || []));
+        setTopRatedMovies(sortedTopMovies);
+        setTopRatedTV(sortedTopTV);
+        setTrendingTV(sortByRating(trendingTvData.results || []));
+
+        // Default home hero
         if (filteredTrending.length > 0) {
           setHeroMedia(filteredTrending[0]);
         }
@@ -63,8 +89,19 @@ export default function App() {
       }
     };
 
-    fetchContent();
+    fetchAllContent();
   }, []);
+
+  // Update Hero Spotlight dynamically whenever tab changes
+  useEffect(() => {
+    if (currentTab === 'movie' && topRatedMovies.length > 0) {
+      setHeroMedia(topRatedMovies[0]);
+    } else if (currentTab === 'tv' && topRatedTV.length > 0) {
+      setHeroMedia(topRatedTV[0]);
+    } else if (currentTab === 'all' && trending.length > 0) {
+      setHeroMedia(trending[0]);
+    }
+  }, [currentTab, topRatedMovies, topRatedTV, trending]);
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -78,7 +115,11 @@ export default function App() {
       try {
         const res = await fetch(`${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(searchQuery)}`);
         const data = await res.json();
-        setSearchResults((data.results || []).filter((item: any) => item.poster_path || item.backdrop_path));
+        const sortedSearch = [...(data.results || [])]
+          .filter((item: any) => item.poster_path || item.backdrop_path)
+          .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+        
+        setSearchResults(sortedSearch);
       } catch (err) {
         console.error('Search error:', err);
       } finally {
@@ -191,6 +232,7 @@ export default function App() {
           </div>
         ) : (
           <>
+            {/* Dynamic Hero Spotlight Banner */}
             {heroMedia && (
               <div className="relative w-full h-[65vh] sm:h-[70vh] min-h-[420px] max-h-[750px] mb-8 overflow-hidden bg-neutral-950">
                 <div className="absolute inset-0">
@@ -199,7 +241,6 @@ export default function App() {
                     alt={heroMedia.title || heroMedia.name}
                     className="w-full h-full object-cover filter brightness-90"
                   />
-                  {/* Heavy vertical and horizontal fade masks blending smoothly into pure black */}
                   <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent" />
                   <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/50 to-transparent w-full sm:w-2/3" />
                   <div className="absolute inset-0 bg-gradient-to-b from-neutral-950/80 via-transparent to-neutral-950" />
@@ -207,6 +248,17 @@ export default function App() {
 
                 <div className="relative max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-12">
                   <div className="max-w-2xl space-y-4">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                        {currentTab === 'movie' ? '#1 Top Rated Movie' : currentTab === 'tv' ? '#1 Top Rated Series' : 'Trending #1'}
+                      </span>
+                      {heroMedia.vote_average && (
+                        <span className="flex items-center gap-1 text-xs font-bold text-amber-400 bg-amber-400/10 px-2.5 py-1 rounded-full border border-amber-400/20">
+                          <Star className="w-3.5 h-3.5 fill-current" />
+                          {heroMedia.vote_average.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
                     <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">{heroMedia.title || heroMedia.name}</h1>
                     <p className="text-sm sm:text-base text-neutral-300 line-clamp-3">{heroMedia.overview}</p>
                     <div className="flex items-center gap-3 pt-2">
@@ -231,12 +283,30 @@ export default function App() {
             )}
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+              {/* HOME TAB */}
               {currentTab === 'all' && (
                 <>
                   <MediaSection title="Weekly Trending" items={trending} onSelect={(item) => router.push(`/watch/${item.id}`)} />
+                  <MediaSection title="Top Rated Movies" items={topRatedMovies} onSelect={(item) => router.push(`/watch/${item.id}`)} />
+                  <MediaSection title="Top Rated TV Series" items={topRatedTV} onSelect={(item) => router.push(`/watch/${item.id}`)} />
                   <MediaSection title="Popular Movies" items={popularMovies} onSelect={(item) => router.push(`/watch/${item.id}`)} />
+                </>
+              )}
+
+              {/* MOVIES TAB (Sorted Best to Worst) */}
+              {currentTab === 'movie' && (
+                <>
+                  <MediaSection title="Top Rated Masterpieces (Highest Rating First)" items={topRatedMovies} onSelect={(item) => router.push(`/watch/${item.id}`)} />
+                  <MediaSection title="Popular & Acclaimed Films" items={popularMovies} onSelect={(item) => router.push(`/watch/${item.id}`)} />
+                </>
+              )}
+
+              {/* TV SHOWS TAB (Sorted Best to Worst) */}
+              {currentTab === 'tv' && (
+                <>
+                  <MediaSection title="Top Rated TV Series (Highest Rating First)" items={topRatedTV} onSelect={(item) => router.push(`/watch/${item.id}`)} />
+                  <MediaSection title="Trending TV Shows" items={trendingTV} onSelect={(item) => router.push(`/watch/${item.id}`)} />
                   <MediaSection title="Popular TV Series" items={popularTV} onSelect={(item) => router.push(`/watch/${item.id}`)} />
-                  <MediaSection title="Top Rated Classics" items={topRated} onSelect={(item) => router.push(`/watch/${item.id}`)} />
                 </>
               )}
             </div>
@@ -255,7 +325,7 @@ function MediaSection({ title, items, onSelect }: { title: string; items: any[];
         <span className="w-2 h-2 rounded-full bg-red-600" /> {title}
       </h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        {items.slice(0, 12).map((item) => (
+        {items.slice(0, 18).map((item) => (
           <MediaCard key={item.id} media={item} onClick={() => onSelect(item)} />
         ))}
       </div>
@@ -264,7 +334,6 @@ function MediaSection({ title, items, onSelect }: { title: string; items: any[];
 }
 
 function MediaCard({ media, onClick }: { media: any; onClick: () => void }) {
-  // Uses w780 profile for lightweight menu performance and quick thumbnail rendering
   const posterUrl = media.poster_path ? `${POSTER_MENU_URL}${media.poster_path}` : 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=80';
   return (
     <button
@@ -280,6 +349,12 @@ function MediaCard({ media, onClick }: { media: any; onClick: () => void }) {
             <Play className="w-6 h-6 fill-current ml-0.5" />
           </div>
         </div>
+        {media.vote_average > 0 && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 bg-neutral-900/90 px-2 py-0.5 rounded-md text-[10px] font-bold text-amber-400 border border-white/10">
+            <Star className="w-3 h-3 fill-current" />
+            {media.vote_average.toFixed(1)}
+          </div>
+        )}
       </div>
       <div className="p-3 bg-neutral-900 w-full pointer-events-none">
         <h3 className="text-xs font-bold text-neutral-200 line-clamp-1 group-hover:text-red-500">{media.title || media.name}</h3>
