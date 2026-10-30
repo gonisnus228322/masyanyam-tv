@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
-  Play, Star, Server, Bookmark, Volume2, CheckCircle2, AlertCircle, RefreshCw, ArrowLeft, ExternalLink 
+  Play, Star, Server, Bookmark, ArrowLeft, ExternalLink, CheckCircle2, AlertCircle, RefreshCw 
 } from 'lucide-react';
 
 const TMDB_API_KEY = 'ab80ba7ea1625a8c5c64d20c5b33b41f';
@@ -21,13 +21,9 @@ export default function WatchPage() {
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
   const [episodeCount, setEpisodeCount] = useState(1);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isShieldActive, setIsShieldActive] = useState(true);
   const [serverStatuses, setServerStatuses] = useState<Record<string, string>>({});
   const [isCheckingSources, setIsCheckingSources] = useState(false);
   const [watchlist, setWatchlist] = useState<any[]>([]);
-
-  const playerContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -38,7 +34,6 @@ export default function WatchPage() {
     }
   }, []);
 
-  // Fetch Media and Season Details
   useEffect(() => {
     if (!mediaId) return;
 
@@ -65,7 +60,6 @@ export default function WatchPage() {
     fetchMediaData();
   }, [mediaId]);
 
-  // Update Episode count when Season changes for TV shows
   useEffect(() => {
     if (mediaDetails && mediaDetails.seasons) {
       const currentSeasonObj = mediaDetails.seasons.find((s: any) => s.season_number === selectedSeason);
@@ -120,16 +114,6 @@ export default function WatchPage() {
     setIsCheckingSources(false);
   };
 
-  const triggerFullscreen = () => {
-    if (playerContainerRef.current) {
-      if (playerContainerRef.current.requestFullscreen) {
-        playerContainerRef.current.requestFullscreen().catch(() => {});
-      } else if ((playerContainerRef.current as any).webkitRequestFullscreen) {
-        (playerContainerRef.current as any).webkitRequestFullscreen();
-      }
-    }
-  };
-
   const toggleWatchlist = (item: any) => {
     const exists = watchlist.some(w => w.id === item.id);
     let updated;
@@ -170,72 +154,38 @@ export default function WatchPage() {
       </div>
 
       <main className="max-w-5xl mx-auto px-4 pt-24 space-y-6">
-        {/* Player Box */}
-        <div className="flex justify-end">
-          <a
-            href={activeSourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs font-semibold text-neutral-400 hover:text-white bg-neutral-900 border border-white/10 px-3 py-1.5 rounded-lg transition-all"
-          >
-            <ExternalLink size={14} /> Open Player in New Tab (Bypass Captcha)
-          </a>
-        </div>
+        {/* Direct Stream Launcher Banner */}
+        <div className="relative aspect-[21/9] sm:aspect-[2.4/1] bg-neutral-900 rounded-2xl overflow-hidden border border-white/10 shadow-2xl flex flex-col items-center justify-center p-6 text-center">
+          <div className="absolute inset-0">
+            <img
+              src={`${IMAGE_BASE_URL}${media.backdrop_path}`}
+              alt={media.title || media.name}
+              className="w-full h-full object-cover filter brightness-[0.35]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/60 to-transparent" />
+          </div>
 
-        <div ref={playerContainerRef} className="relative aspect-video bg-black w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-          {isPlaying ? (
-            <div className="relative w-full h-full">
-              {isShieldActive && (
-                <button
-                  onClick={() => setIsShieldActive(false)}
-                  onPointerDown={(e) => { e.preventDefault(); setIsShieldActive(false); }}
-                  className="absolute inset-0 z-30 w-full h-full bg-neutral-950/80 cursor-pointer flex flex-col items-center justify-center gap-3 p-4 text-center focus:outline-none focus:ring-4 focus:ring-red-500"
-                >
-                  <div className="w-16 h-16 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-600/50">
-                    <Play className="w-8 h-8 fill-current ml-1" />
-                  </div>
-                  <span className="bg-neutral-900 text-xs font-semibold text-white px-4 py-2 rounded-full border border-white/20">
-                    Click / Tap to start stream
-                  </span>
-                </button>
-              )}
-              <iframe
-                src={activeSourceUrl}
-                className="w-full h-full border-0 absolute inset-0 z-10 pointer-events-auto"
-                allowFullScreen
-                sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-presentation"
-                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                title="Stream Player"
-              />
+          <div className="relative z-10 space-y-4 max-w-xl">
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+              {media.title || media.name}
+            </h1>
+            <p className="text-xs sm:text-sm text-neutral-300">
+              Active Source: <span className="text-red-500 font-bold">{sources[activeServer]?.name}</span>
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <a
+                href={activeSourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-8 py-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-lg shadow-xl shadow-red-600/40 transition-all cursor-pointer border border-red-500 focus:outline-none focus:ring-4 focus:ring-red-500"
+              >
+                <Play className="w-6 h-6 fill-current" /> Launch Fullscreen Player
+              </a>
             </div>
-          ) : (
-            <div className="relative w-full h-full flex items-center justify-center">
-              <img
-                src={`${IMAGE_BASE_URL}${media.backdrop_path}`}
-                alt={media.title || media.name}
-                className="w-full h-full object-cover filter brightness-50"
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/40">
-                <button
-                  onClick={() => {
-                    setIsPlaying(true);
-                    setTimeout(triggerFullscreen, 300);
-                  }}
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    setIsPlaying(true);
-                    setTimeout(triggerFullscreen, 300);
-                  }}
-                  className="w-20 h-20 rounded-full bg-red-600 text-white flex items-center justify-center shadow-2xl shadow-red-600/50 cursor-pointer focus:outline-none focus:ring-4 focus:ring-red-500"
-                >
-                  <Play className="w-9 h-9 fill-current ml-1" />
-                </button>
-                <span className="text-sm font-semibold text-neutral-200 bg-neutral-900/90 px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
-                  <Volume2 size={16} /> Press OK / Click to Stream
-                </span>
-              </div>
-            </div>
-          )}
+            <p className="text-[11px] text-neutral-400">
+              Opens cleanly in a new window, bypassing TV iframe security and captcha blocks.
+            </p>
+          </div>
         </div>
 
         {/* Source selector panel */}
@@ -256,8 +206,8 @@ export default function WatchPage() {
                 return (
                   <button
                     key={srv.id}
-                    onClick={() => { if (!isNoStream) { setActiveServer(idx); setIsShieldActive(true); } }}
-                    onPointerDown={(e) => { e.preventDefault(); if (!isNoStream) { setActiveServer(idx); setIsShieldActive(true); } }}
+                    onClick={() => { if (!isNoStream) setActiveServer(idx); }}
+                    onPointerDown={(e) => { e.preventDefault(); if (!isNoStream) setActiveServer(idx); }}
                     disabled={isNoStream}
                     className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 ${
                       activeServer === idx
@@ -281,7 +231,7 @@ export default function WatchPage() {
             </div>
           </div>
 
-          {/* Season and Episode Dropdown Selectors */}
+          {/* Season and Episode Dropdowns */}
           {mediaDetails && media.media_type === 'tv' && mediaDetails.seasons && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-neutral-950 p-4 rounded-xl border border-white/5">
               <div>
@@ -318,7 +268,7 @@ export default function WatchPage() {
 
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">{media.title || media.name}</h1>
+              <h2 className="text-2xl font-bold text-white">{media.title || media.name}</h2>
               <button
                 onClick={() => toggleWatchlist(media)}
                 onPointerDown={(e) => { e.preventDefault(); toggleWatchlist(media); }}
