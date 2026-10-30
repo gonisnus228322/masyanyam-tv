@@ -208,10 +208,10 @@ export default function WatchPage() {
         </div>
       </main>
 
-      {/* Settings Modal Drawer */}
+      {/* Perfectly Centered Fullscreen Overlay Modal Drawer */}
       {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 bg-neutral-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-2xl bg-neutral-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden p-6 space-y-6">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="relative w-full max-w-xl bg-neutral-900 border border-white/15 rounded-2xl shadow-2xl overflow-hidden p-6 space-y-6 my-auto">
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div>
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -233,7 +233,7 @@ export default function WatchPage() {
               <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">
                 Available Working Sources:
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-1">
                 {sources.map((srv, idx) => (
                   <button
                     key={srv.id}
