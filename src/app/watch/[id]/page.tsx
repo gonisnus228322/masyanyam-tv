@@ -69,7 +69,6 @@ export default function WatchPage() {
     }
   }, [selectedSeason, mediaDetails]);
 
-  // Revamped high-speed streaming sources
   const getEmbedSources = (id: number, type: string, season = 1, episode = 1) => [
     { id: 'vidlink', name: 'VidLink Pro (Default HQ)', quality: '1080p HD', url: type === 'movie' ? `https://vidlink.pro/movie/${id}` : `https://vidlink.pro/tv/${id}/${season}/${episode}` },
     { id: 'embed_su', name: 'Embed.su (Fast)', quality: '1080p / 4K', url: type === 'movie' ? `https://embed.su/embed/movie/${id}` : `https://embed.su/embed/tv/${id}/${season}/${episode}` },
@@ -118,40 +117,42 @@ export default function WatchPage() {
       </div>
 
       <main className="max-w-5xl mx-auto px-4 pt-24 space-y-6">
-        {/* Video Player or Backdrop Preview */}
+        {/* Permanent Video Player Box (Never Unmounts) */}
         <div className="relative aspect-video bg-black w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-          {isPlaying ? (
-            <div className="relative w-full h-full">
-              <iframe
-                key={`${playerKey}-${activeServer}-${selectedSeason}-${selectedEpisode}`}
-                src={sources[activeServer]?.url}
-                className="w-full h-full border-0 absolute inset-0 z-10 pointer-events-auto"
-                allowFullScreen
-                allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope"
-                title="Stream Player"
-              />
+          {/* Underlying Stream Player Frame */}
+          <iframe
+            key={`${playerKey}-${activeServer}-${selectedSeason}-${selectedEpisode}`}
+            src={sources[activeServer]?.url}
+            className="w-full h-full border-0 absolute inset-0 z-10"
+            allowFullScreen
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope"
+            title="Stream Player"
+          />
+
+          {/* Interactive Preview Overlay (Fades out smoothly on play) */}
+          <div 
+            className={`absolute inset-0 z-20 transition-opacity duration-300 flex items-center justify-center bg-black/50 backdrop-blur-sm ${
+              isPlaying ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'
+            }`}
+          >
+            <img
+              src={`${IMAGE_BASE_URL}${media.backdrop_path}`}
+              alt={media.title || media.name}
+              className="absolute inset-0 w-full h-full object-cover filter brightness-50 -z-10"
+            />
+            <div className="flex flex-col items-center justify-center gap-4">
+              <button
+                onClick={() => setIsPlaying(true)}
+                onPointerDown={(e) => { e.preventDefault(); setIsPlaying(true); }}
+                className="w-20 h-20 rounded-full bg-red-600 text-white flex items-center justify-center shadow-2xl shadow-red-600/50 cursor-pointer focus:outline-none focus:ring-4 focus:ring-red-500 hover:scale-105 transition-transform"
+              >
+                <Play className="w-9 h-9 fill-current ml-1" />
+              </button>
+              <span className="text-xs font-semibold text-neutral-200 bg-neutral-900/90 px-4 py-1.5 rounded-full border border-white/10">
+                Click OK to Play Stream
+              </span>
             </div>
-          ) : (
-            <div className="relative w-full h-full flex items-center justify-center">
-              <img
-                src={`${IMAGE_BASE_URL}${media.backdrop_path}`}
-                alt={media.title || media.name}
-                className="w-full h-full object-cover filter brightness-50"
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/40">
-                <button
-                  onClick={() => setIsPlaying(true)}
-                  onPointerDown={(e) => { e.preventDefault(); setIsPlaying(true); }}
-                  className="w-20 h-20 rounded-full bg-red-600 text-white flex items-center justify-center shadow-2xl shadow-red-600/50 cursor-pointer focus:outline-none focus:ring-4 focus:ring-red-500 hover:scale-105 transition-transform"
-                >
-                  <Play className="w-9 h-9 fill-current ml-1" />
-                </button>
-                <span className="text-xs font-semibold text-neutral-200 bg-neutral-900/90 px-4 py-1.5 rounded-full border border-white/10">
-                  Click OK to Play Stream
-                </span>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Controls & Details Panel */}
