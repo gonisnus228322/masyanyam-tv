@@ -58,23 +58,23 @@ export default function WatchPage() {
     }
   }, [selectedSeason, mediaDetails]);
 
-  // WebOS-tested embeds (AutoEmbed & VidSrc TO bypass cross-origin restrictions on Smart TVs)
-  const getEmbedSources = (id: number, type: string, season = 1, episode = 1) => [
-    { id: 'autoembed', name: 'AutoEmbed TV (Primary)', quality: '1080p HD', url: type === 'movie' ? `https://player.autoembed.cc/embed/movie/${id}` : `https://player.autoembed.cc/embed/tv/${id}/${season}/${episode}` },
-    { id: 'vidsrc_to', name: 'VidSrc TO (Fast)', quality: '1080p HD', url: type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${season}/${episode}` },
-    { id: 'vidlink', name: 'VidLink Pro', quality: '1080p HD', url: type === 'movie' ? `https://vidlink.pro/movie/${id}` : `https://vidlink.pro/tv/${id}/${season}/${episode}` },
-    { id: 'embed_su', name: 'Embed.su', quality: '1080p / 4K', url: type === 'movie' ? `https://embed.su/embed/movie/${id}` : `https://embed.su/embed/tv/${id}/${season}/${episode}` },
-    { id: 'vidsrc_cc', name: 'VidSrc V2', quality: '1080p HD', url: type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}` },
-    { id: 'multiembed', name: 'SuperEmbed', quality: '1080p / 720p', url: type === 'movie' ? `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1` : `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${season}&e=${episode}` }
-  ];
+// Route embed URLs through your local proxy to bypass TV frame blocking headers
+  const getEmbedSources = (id: number, type: string, season = 1, episode = 1) => {
+    const rawSources = [
+      { id: 'vidlink', name: 'VidLink Pro (HQ)', quality: '1080p HD', url: type === 'movie' ? `https://vidlink.pro/movie/${id}` : `https://vidlink.pro/tv/${id}/${season}/${episode}` },
+      { id: 'embed_su', name: 'Embed.su (Fast)', quality: '1080p / 4K', url: type === 'movie' ? `https://embed.su/embed/movie/${id}` : `https://embed.su/embed/tv/${id}/${season}/${episode}` },
+      { id: 'autoembed', name: 'AutoEmbed Secure', quality: '1080p HD', url: type === 'movie' ? `https://player.autoembed.cc/embed/movie/${id}` : `https://player.autoembed.cc/embed/tv/${id}/${season}/${episode}` },
+      { id: 'vidsrc_cc', name: 'VidSrc V2 Prime', quality: '1080p HD', url: type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}` },
+      { id: 'multiembed', name: 'SuperEmbed Stream', quality: '1080p / 720p', url: type === 'movie' ? `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1` : `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${season}&e=${episode}` },
+      { id: 'moviesapi', name: 'MoviesAPI Mirror', quality: '1080p HD', url: type === 'movie' ? `https://moviesapi.club/movie/${id}` : `https://moviesapi.club/tv/${id}-${season}-${episode}` }
+    ];
 
-  if (!media) {
-    return (
-      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center font-bold text-xl">
-        Loading Player...
-      </div>
-    );
-  }
+    // Wrap each target URL with your proxy API route
+    return rawSources.map(source => ({
+      ...source,
+      url: `/api/proxy?url=${encodeURIComponent(source.url)}`
+    }));
+  };
 
   const sources = getEmbedSources(Number(mediaId), media.media_type, selectedSeason, selectedEpisode);
 
