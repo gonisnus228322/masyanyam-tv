@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
-  Star, ArrowLeft, Settings, X, CheckCircle2, Zap, Play, RefreshCw 
+  Star, Bookmark, ArrowLeft, Settings, X, CheckCircle2, Zap, RefreshCw 
 } from 'lucide-react';
 
 const TMDB_API_KEY = 'ab80ba7ea1625a8c5c64d20c5b33b41f';
@@ -21,7 +21,6 @@ export default function WatchPage() {
   const [selectedEpisode, setSelectedEpisode] = useState(1);
   const [episodeCount, setEpisodeCount] = useState(1);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
   const [playerKey, setPlayerKey] = useState(0);
 
   useEffect(() => {
@@ -58,34 +57,29 @@ export default function WatchPage() {
     }
   }, [selectedSeason, mediaDetails]);
 
-// Route embed URLs through your local proxy to bypass TV frame blocking headers
-  const getEmbedSources = (id: number, type: string, season = 1, episode = 1) => {
-    const rawSources = [
-      { id: 'vidlink', name: 'VidLink Pro (HQ)', quality: '1080p HD', url: type === 'movie' ? `https://vidlink.pro/movie/${id}` : `https://vidlink.pro/tv/${id}/${season}/${episode}` },
-      { id: 'embed_su', name: 'Embed.su (Fast)', quality: '1080p / 4K', url: type === 'movie' ? `https://embed.su/embed/movie/${id}` : `https://embed.su/embed/tv/${id}/${season}/${episode}` },
-      { id: 'autoembed', name: 'AutoEmbed Secure', quality: '1080p HD', url: type === 'movie' ? `https://player.autoembed.cc/embed/movie/${id}` : `https://player.autoembed.cc/embed/tv/${id}/${season}/${episode}` },
-      { id: 'vidsrc_cc', name: 'VidSrc V2 Prime', quality: '1080p HD', url: type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}` },
-      { id: 'multiembed', name: 'SuperEmbed Stream', quality: '1080p / 720p', url: type === 'movie' ? `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1` : `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${season}&e=${episode}` },
-      { id: 'moviesapi', name: 'MoviesAPI Mirror', quality: '1080p HD', url: type === 'movie' ? `https://moviesapi.club/movie/${id}` : `https://moviesapi.club/tv/${id}-${season}-${episode}` }
-    ];
+  // Clean direct embed sources (no client-crashing proxy calls)
+  const getEmbedSources = (id: number, type: string, season = 1, episode = 1) => [
+    { id: 'vidlink', name: 'VidLink Pro (Default)', quality: '1080p HD', url: type === 'movie' ? `https://vidlink.pro/movie/${id}` : `https://vidlink.pro/tv/${id}/${season}/${episode}` },
+    { id: 'embed_su', name: 'Embed.su (Fast)', quality: '1080p / 4K', url: type === 'movie' ? `https://embed.su/embed/movie/${id}` : `https://embed.su/embed/tv/${id}/${season}/${episode}` },
+    { id: 'autoembed', name: 'AutoEmbed Secure', quality: '1080p HD', url: type === 'movie' ? `https://player.autoembed.cc/embed/movie/${id}` : `https://player.autoembed.cc/embed/tv/${id}/${season}/${episode}` },
+    { id: 'vidsrc_cc', name: 'VidSrc V2 Prime', quality: '1080p HD', url: type === 'movie' ? `https://vidsrc.cc/v2/embed/movie/${id}` : `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}` },
+    { id: 'multiembed', name: 'SuperEmbed Stream', quality: '1080p / 720p', url: type === 'movie' ? `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1` : `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${season}&e=${episode}` },
+    { id: 'moviesapi', name: 'MoviesAPI Mirror', quality: '1080p HD', url: type === 'movie' ? `https://moviesapi.club/movie/${id}` : `https://moviesapi.club/tv/${id}-${season}-${episode}` }
+  ];
 
-    // Wrap each target URL with your proxy API route
-    return rawSources.map(source => ({
-      ...source,
-      url: `/api/proxy?url=${encodeURIComponent(source.url)}`
-    }));
-  };
+  if (!media) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center font-bold text-xl">
+        Loading Title...
+      </div>
+    );
+  }
 
   const sources = getEmbedSources(Number(mediaId), media.media_type, selectedSeason, selectedEpisode);
 
-  const handleStartPlayback = () => {
-    setHasStarted(true);
-    setPlayerKey(prev => prev + 1);
-  };
-
   return (
     <div className="fixed inset-0 bg-neutral-950 text-neutral-100 font-sans overflow-hidden flex flex-col">
-      {/* Top Action Bar */}
+      {/* Top Bar */}
       <div className="absolute top-0 left-0 right-0 z-50 bg-gradient-to-b from-neutral-950/90 via-neutral-950/40 to-transparent px-6 py-4 flex items-center justify-between pointer-events-auto">
         <button
           onClick={() => router.back()}
@@ -100,7 +94,6 @@ export default function WatchPage() {
             onClick={() => setPlayerKey(prev => prev + 1)}
             onPointerDown={(e) => { e.preventDefault(); setPlayerKey(prev => prev + 1); }}
             className="flex items-center gap-1.5 bg-neutral-900/80 hover:bg-neutral-800 text-neutral-300 px-3 py-2.5 rounded-xl text-xs font-medium backdrop-blur border border-white/10 cursor-pointer"
-            title="Reload Stream"
           >
             <RefreshCw className="w-3.5 h-3.5" /> Reload
           </button>
@@ -115,42 +108,28 @@ export default function WatchPage() {
         </div>
       </div>
 
-      {/* Main Video Container */}
-      <div className="relative w-full h-full bg-black flex-1 flex items-center justify-center">
-        {!hasStarted ? (
-          <div className="relative z-20 flex flex-col items-center justify-center gap-4 text-center p-6 bg-neutral-900/90 backdrop-blur-md border border-white/10 rounded-2xl max-w-md shadow-2xl">
-            <h2 className="text-xl font-bold text-white">{media.title || media.name}</h2>
-            <p className="text-xs text-neutral-400">Ready to play on webOS TV</p>
-            <button
-              onClick={handleStartPlayback}
-              onPointerDown={(e) => { e.preventDefault(); handleStartPlayback(); }}
-              className="flex items-center gap-3 bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-xl text-lg font-bold cursor-pointer shadow-xl shadow-red-600/40 border border-red-500 focus:outline-none focus:ring-4 focus:ring-red-500"
-            >
-              <Play className="w-6 h-6 fill-current" /> Press OK to Start Video
-            </button>
-          </div>
-        ) : (
-          <iframe
-            key={`${playerKey}-${activeServer}-${selectedSeason}-${selectedEpisode}`}
-            src={sources[activeServer]?.url}
-            className="w-full h-full border-0 absolute inset-0 z-10 pointer-events-auto"
-            allowFullScreen
-            allow="autoplay; fullscreen; encrypted-media; picture-in-picture; accelerometer; gyroscope"
-            title="Stream Player"
-          />
-        )}
+      {/* Direct Player Container */}
+      <div className="relative w-full h-full bg-black flex-1">
+        <iframe
+          key={`${playerKey}-${activeServer}-${selectedSeason}-${selectedEpisode}`}
+          src={sources[activeServer]?.url}
+          className="w-full h-full border-0 absolute inset-0 z-10 pointer-events-auto"
+          allowFullScreen
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope"
+          title="Stream Player"
+        />
       </div>
 
-      {/* Settings Modal Drawer */}
+      {/* Server Settings Drawer */}
       {isSettingsOpen && (
         <div className="fixed inset-0 z-50 bg-neutral-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="relative w-full max-w-2xl bg-neutral-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div>
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-red-500" /> Playback & Server Settings
+                  <Settings className="w-5 h-5 text-red-500" /> Playback & Source Settings
                 </h2>
-                <p className="text-xs text-neutral-400 mt-0.5">Switch servers if a stream doesn't start automatically</p>
+                <p className="text-xs text-neutral-400 mt-0.5">Switch servers if a stream doesn't load</p>
               </div>
               <button
                 onClick={() => setIsSettingsOpen(false)}
@@ -161,10 +140,9 @@ export default function WatchPage() {
               </button>
             </div>
 
-            {/* Source Grid */}
             <div className="space-y-3">
               <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                Working Smart TV Sources:
+                Available Working Sources:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
                 {sources.map((srv, idx) => (
@@ -190,7 +168,6 @@ export default function WatchPage() {
               </div>
             </div>
 
-            {/* Season / Episode Dropdowns */}
             {mediaDetails && media.media_type === 'tv' && mediaDetails.seasons && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-neutral-950 p-4 rounded-xl border border-white/5">
                 <div>
