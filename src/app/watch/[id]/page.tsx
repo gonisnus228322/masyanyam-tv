@@ -117,9 +117,9 @@ export default function WatchPage() {
       </div>
 
       <main className="max-w-5xl mx-auto px-4 pt-24 space-y-6">
-        {/* Permanent Video Player Box (Never Unmounts) */}
-        <div className="relative aspect-video bg-black w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-          {/* Underlying Stream Player Frame */}
+        {/* Guaranteed Visible Video Player Box */}
+        <div className="relative w-full aspect-video min-h-[450px] bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+          {/* Permanent Underlying Stream Player */}
           <iframe
             key={`${playerKey}-${activeServer}-${selectedSeason}-${selectedEpisode}`}
             src={sources[activeServer]?.url}
@@ -129,9 +129,9 @@ export default function WatchPage() {
             title="Stream Player"
           />
 
-          {/* Interactive Preview Overlay (Fades out smoothly on play) */}
+          {/* Clickable Backdrop Preview Overlay */}
           <div 
-            className={`absolute inset-0 z-20 transition-opacity duration-300 flex items-center justify-center bg-black/50 backdrop-blur-sm ${
+            className={`absolute inset-0 z-20 transition-opacity duration-300 flex items-center justify-center bg-black/60 backdrop-blur-sm ${
               isPlaying ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'
             }`}
           >
@@ -163,15 +163,13 @@ export default function WatchPage() {
             </div>
             
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              {isPlaying && (
-                <button
-                  onClick={() => setPlayerKey(prev => prev + 1)}
-                  onPointerDown={(e) => { e.preventDefault(); setPlayerKey(prev => prev + 1); }}
-                  className="flex items-center gap-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-3 py-2 rounded-xl text-xs font-semibold border border-white/10 cursor-pointer"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" /> Reload Stream
-                </button>
-              )}
+              <button
+                onClick={() => setPlayerKey(prev => prev + 1)}
+                onPointerDown={(e) => { e.preventDefault(); setPlayerKey(prev => prev + 1); }}
+                className="flex items-center gap-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-3 py-2 rounded-xl text-xs font-semibold border border-white/10 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Reload Stream
+              </button>
               <button
                 onClick={() => setIsSettingsOpen(true)}
                 onPointerDown={(e) => { e.preventDefault(); setIsSettingsOpen(true); }}
