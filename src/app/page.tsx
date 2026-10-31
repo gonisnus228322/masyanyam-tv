@@ -10,7 +10,7 @@ import {
 const TMDB_API_KEY = 'ab80ba7ea1625a8c5c64d20c5b33b41f';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/original';
-const POSTER_MENU_URL = 'https://image.tmdb.org/t/p/w780';
+const POSTER_MENU_URL = 'https://image.tmdb.org/t/p/w342'; // Optimized size to prevent webOS memory choking
 
 export default function App() {
   const router = useRouter();
@@ -343,7 +343,13 @@ function MediaCard({ media, onClick }: { media: any; onClick: () => void }) {
       className="group relative flex flex-col cursor-pointer bg-neutral-900 rounded-xl overflow-hidden border border-white/5 text-left w-full transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-red-500 focus:scale-105"
     >
       <div className="relative aspect-[2/3] w-full bg-neutral-950 overflow-hidden">
-        <img src={posterUrl} alt={media.title || media.name} className="w-full h-full object-cover group-hover:scale-110 pointer-events-none" loading="lazy" />
+        <img 
+          src={posterUrl} 
+          alt={media.title || media.name} 
+          className="w-full h-full object-cover group-hover:scale-110 pointer-events-none" 
+          loading="lazy" 
+          decoding="async" 
+        />
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
           <div className="w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-600/50">
             <Play className="w-6 h-6 fill-current ml-0.5" />
