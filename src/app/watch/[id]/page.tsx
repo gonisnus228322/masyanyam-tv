@@ -8,7 +8,7 @@ import {
 
 const TMDB_API_KEY = 'ab80ba7ea1625a8c5c64d20c5b33b41f';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/original';
+const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w1280'; // Optimized w1280 size for instant TV/laptop decoding
 
 export default function WatchPage() {
   const params = useParams();
@@ -25,6 +25,7 @@ export default function WatchPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [playerKey, setPlayerKey] = useState(0);
   const [watchlist, setWatchlist] = useState<any[]>([]);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
     try {
@@ -69,7 +70,6 @@ export default function WatchPage() {
     }
   }, [selectedSeason, mediaDetails]);
 
-  // Premium, high-speed streaming server stack
   const getEmbedSources = (id: number, type: string, season = 1, episode = 1) => [
     { id: 'vidlink', name: 'VidLink Pro', quality: '1080p HD', badge: 'Default HQ', url: type === 'movie' ? `https://vidlink.pro/movie/${id}` : `https://vidlink.pro/tv/${id}/${season}/${episode}` },
     { id: 'embed_su', name: 'Embed.su', quality: '1080p / 4K', badge: 'Ultra Fast', url: type === 'movie' ? `https://embed.su/embed/movie/${id}` : `https://embed.su/embed/tv/${id}/${season}/${episode}` },
@@ -144,11 +144,16 @@ export default function WatchPage() {
               isPlaying ? 'opacity-0 pointer-events-none scale-105' : 'opacity-100 pointer-events-auto scale-100'
             }`}
           >
-            <img
-              src={`${IMAGE_BASE_URL}${media.backdrop_path}`}
-              alt={media.title || media.name}
-              className="absolute inset-0 w-full h-full object-cover filter brightness-[0.35] blur-[2px] transform scale-105 -z-10 transition-transform duration-1000"
-            />
+            {media.backdrop_path && (
+              <img
+                src={`${IMAGE_BASE_URL}${media.backdrop_path}`}
+                alt={media.title || media.name}
+                onLoad={() => setImageLoaded(true)}
+                className={`absolute inset-0 w-full h-full object-cover filter brightness-[0.35] blur-[1px] transform scale-105 -z-10 transition-opacity duration-700 ${
+                  imageLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+            )}
             
             <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent -z-10"></div>
 
